@@ -1,3 +1,4 @@
+// src/components/auth/LoginForm.tsx
 'use client'
 
 import { useRouter } from 'next/navigation'
@@ -55,7 +56,12 @@ export default function LoginForm() {
             placeholder="••••••••"
           />
         </div>
-        <Button type="submit" className="w-full" disabled={loading}>
+        <Button 
+          type="submit" 
+          className="w-full" 
+          disabled={loading}
+          variant="default"
+        >
           {loading ? 'Signing in...' : 'Sign in'}
         </Button>
       </form>
