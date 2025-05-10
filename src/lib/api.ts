@@ -1,20 +1,29 @@
 import axios from 'axios'
+import { getToken } from '@/lib/auth'
+
+const API_URL = process.env.NEXT_PUBLIC_API_BASE_URL
 
 const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000/api',
+  baseURL: API_URL,
 })
 
-export const processPdf = async (file: File) => {
-  const formData = new FormData()
-  formData.append('pdf', file)
+// Add request interceptor to include token
+api.interceptors.request.use(async (config) => {
+  const token = await getToken()
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`
+  }
+  return config
+})
 
-  const response = await api.post('/process-pdf', formData, {
-    headers: {
-      'Content-Type': 'multipart/form-data',
-    },
-  })
-
-  return response.data
-}
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      // Handle unauthorized errors (e.g., redirect to login)
+    }
+    return Promise.reject(error)
+  }
+)
 
 export default api
