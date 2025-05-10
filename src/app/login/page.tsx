@@ -1,11 +1,11 @@
-// src/app/login/page.tsx
 import LoginForm from '@/components/auth/LoginForm'
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 
 export default async function LoginPage() {
   // Proper async cookie handling
-  const token = (await cookies().get('token'))?.value
+  const cookieStore = cookies()
+  const token = cookieStore.get('token')?.value
 
   if (token) {
     redirect('/dashboard')
