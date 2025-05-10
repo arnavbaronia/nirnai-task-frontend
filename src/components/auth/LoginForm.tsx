@@ -1,4 +1,3 @@
-// src/components/auth/LoginForm.tsx
 'use client'
 
 import { useRouter } from 'next/navigation'
@@ -6,7 +5,7 @@ import { Button } from '../ui/Button'
 import { Input } from '../ui/Input'
 import { toast } from 'react-hot-toast'
 import { useState } from 'react'
-import { login } from '@/lib/auth'
+import { authService } from '@/lib/auth'
 import { useAuth } from '@/context/AuthContext'
 import Link from 'next/link'
 
@@ -24,9 +23,11 @@ export default function LoginForm() {
     const password = formData.get('password') as string
 
     try {
-      const { access_token, user } = await login({ email, password })
+      const { access_token, user } = await authService.login({ email, password })
       authLogin(access_token, user)
       toast.success('Login successful')
+      router.push('/dashboard') // Ensure this matches your route
+      router.refresh() // Force refresh to update server-side state
     } catch (error) {
       toast.error('Login failed. Please check your credentials.')
     } finally {

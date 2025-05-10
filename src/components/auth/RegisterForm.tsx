@@ -5,7 +5,7 @@ import { Button } from '../ui/Button'
 import { Input } from '../ui/Input'
 import { toast } from 'react-hot-toast'
 import { useState } from 'react'
-import { register } from '@/lib/auth'
+import { authService } from '@/lib/auth'
 import Link from 'next/link'
 
 export default function RegisterForm() {
@@ -22,7 +22,6 @@ export default function RegisterForm() {
     const password = formData.get('password') as string
     const confirmPassword = formData.get('confirmPassword') as string
 
-    // Basic validation
     if (password !== confirmPassword) {
       setErrors({ confirmPassword: 'Passwords do not match' })
       setLoading(false)
@@ -30,7 +29,7 @@ export default function RegisterForm() {
     }
 
     try {
-      await register({ email, password, confirmPassword })
+      await authService.register({ email, password, confirmPassword })
       toast.success('Registration successful! Please login.')
       router.push('/login')
     } catch (error: any) {

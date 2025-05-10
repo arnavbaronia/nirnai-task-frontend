@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
 import { User } from '@/types/auth'
-import { getCurrentUser } from '@/lib/auth'
+import { authService } from '@/lib/auth'
 import { useRouter, usePathname } from 'next/navigation'
 import { toast } from 'react-hot-toast'
 
@@ -10,7 +10,7 @@ type AuthContextType = {
   user: User | null
   token: string | null
   login: (token: string, user: User) => void
-  logout: () => void
+  logout: () => Promise<void>
   loading: boolean
 }
 
@@ -18,7 +18,7 @@ const AuthContext = createContext<AuthContextType>({
   user: null,
   token: null,
   login: () => {},
-  logout: () => {},
+  logout: async () => {},
   loading: true
 })
 
@@ -31,32 +31,28 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     const initializeAuth = async () => {
-      try {
-        const storedToken = localStorage.getItem('token')
-        
-        if (storedToken) {
-          const user = await getCurrentUser(storedToken)
+      const storedToken = localStorage.getItem('token')
+      
+      if (storedToken) {
+        try {
+          const user = await authService.getCurrentUser(storedToken)
           setToken(storedToken)
           setUser(user)
           
-          // If on login/register page, redirect to dashboard
           if (['/login', '/register'].includes(pathname)) {
             router.push('/dashboard')
+            router.refresh() // Force refresh to sync server state
           }
-        } else {
-          // If not on public route, redirect to login
+        } catch (error) {
+          localStorage.removeItem('token')
           if (!['/login', '/register'].includes(pathname)) {
             router.push('/login')
           }
         }
-      } catch (error) {
-        localStorage.removeItem('token')
-        if (!['/login', '/register'].includes(pathname)) {
-          router.push('/login')
-        }
-      } finally {
-        setLoading(false)
+      } else if (!['/login', '/register'].includes(pathname)) {
+        router.push('/login')
       }
+      setLoading(false)
     }
 
     initializeAuth()
@@ -67,11 +63,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setToken(token)
     setUser(user)
     router.push('/dashboard')
+    router.refresh() // Force refresh to sync server state
   }
 
   const logout = async () => {
     try {
-      await logout()
+      await authService.logout()
     } catch (error) {
       console.error('Logout error:', error)
     }
@@ -79,6 +76,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setToken(null)
     setUser(null)
     router.push('/login')
+    router.refresh() // Force refresh to sync server state
     toast.success('Logged out successfully')
   }
 
