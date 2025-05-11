@@ -1,91 +1,79 @@
 "use client";
 
-import React, { createContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { User, UserCredentials, AuthContextType } from '@/types';
-import { authApi, setToken, removeToken, isTokenValid, getToken } from '@/lib/api';
-import { jwtDecode } from 'jwt-decode';
+import { User, UserCredentials } from '@/types';
+import { authApi } from '@/lib/api';
 
-// Create Auth Context
+interface AuthContextType {
+  user: User | null;
+  isLoading: boolean;
+  isAuthenticated: boolean;
+  login: (credentials: UserCredentials) => Promise<void>;
+  register: (credentials: UserCredentials) => Promise<void>;
+  logout: () => Promise<void>;
+}
+
 export const AuthContext = createContext<AuthContextType>({
   user: null,
   isLoading: true,
   isAuthenticated: false,
   login: async () => {},
   register: async () => {},
-  logout: () => {},
+  logout: async () => {},
 });
 
-interface AuthProviderProps {
-  children: React.ReactNode;
-}
-
-export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
 
-  // Check if user is authenticated on mount
   useEffect(() => {
-    const initializeAuth = async () => {
-      if (isTokenValid()) {
-        try {
-          const userData = await authApi.getProfile();
-          setUser(userData);
-        } catch (error) {
-          removeToken();
-        }
+    const checkAuth = async () => {
+      try {
+        const userData = await authApi.getProfile();
+        setUser(userData);
+      } catch (error) {
+        setUser(null);
+      } finally {
+        setIsLoading(false);
       }
-      setIsLoading(false);
     };
-
-    initializeAuth();
+    checkAuth();
   }, []);
 
-  // Login function
   const login = async (credentials: UserCredentials) => {
+    setIsLoading(true);
     try {
-      setIsLoading(true);
-      const { access_token } = await authApi.login(credentials);
-      setToken(access_token);
-      
-      // Extract user info from token
-      const decoded: any = jwtDecode(access_token);
-      
-      // Get full profile
-      const userData = await authApi.getProfile();
-      setUser(userData);
-      
-      router.push('/dashboard');
-    } catch (error) {
-      console.error('Login error:', error);
-      throw error;
+      const response = await authApi.login(credentials);
+      if (response?.user) {
+        setUser(response.user);
+        router.push('/dashboard');
+      }
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Register function
-  const register = async (data: UserCredentials) => {
+  const register = async (credentials: UserCredentials) => {
+    setIsLoading(true);
     try {
-      setIsLoading(true);
-      const userData = await authApi.register(data);
-      // After registration, log in automatically
-      await login(data);
-      return userData;
-    } catch (error) {
-      console.error('Registration error:', error);
-      throw error;
+      await authApi.register(credentials);
+      await login(credentials);
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Logout function
-  const logout = () => {
-    removeToken();
-    setUser(null);
-    router.push('/auth/login');
+  const logout = async () => {
+    setIsLoading(true);
+    try {
+      await authApi.logout();
+      setUser(null);
+      router.push('/login');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (

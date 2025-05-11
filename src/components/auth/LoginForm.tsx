@@ -22,8 +22,13 @@ export default function LoginForm() {
     setIsLoading(true);
 
     try {
-      await login(email, password);
-      router.push('/dashboard');
+      const result = await login(email, password);
+      if (result?.success) {
+        router.push('/dashboard');
+        router.refresh(); // Ensure client-side state updates
+      } else {
+        setError('Login failed. Please try again.');
+      }
     } catch (err: any) {
       setError(err.message || 'Failed to login. Please check your credentials.');
     } finally {
@@ -61,14 +66,6 @@ export default function LoginForm() {
           required
           placeholder="••••••••"
         />
-        <div className="text-right mt-1">
-          <Link
-            href="#"
-            className="text-sm text-blue-600 hover:text-blue-800"
-          >
-            Forgot password?
-          </Link>
-        </div>
       </div>
 
       <Button type="submit" className="w-full" disabled={isLoading}>
